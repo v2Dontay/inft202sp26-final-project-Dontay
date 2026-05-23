@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}NYC School Construction Dashboard{% endblock %}
+
+{% block content %}
+<h1>Active School Construction Dashboard</h1>
+<p>Active construction projects across New York City public school buildings.</p>
+
+<section class="grid">
+    <div class="card stat">
+        <div class="stat-label">Active Projects</div>
+        <div class="stat-value">{{ stats.projects|number }}</div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">School Buildings</div>
+        <div class="stat-value">{{ stats.buildings|number }}</div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Average Award</div>
+        <div class="stat-value">{{ stats.avg_award|money }}</div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Busiest Borough</div>
+        <div class="stat-value">{{ stats.top_borough }}</div>
+    </div>
+</section>
+
+<section class="charts">
+    <div class="card section">
+        <h2>Projects by Borough</h2>
+        <canvas id="countChart"></canvas>
+    </div>
+    <div class="card section">
+        <h2>Average Award by Borough</h2>
+        <canvas id="awardChart"></canvas>
+    </div>
+</section>
+
+<script>
+    const countLabels = {{ project_counts | map(attribute='borough') | list | tojson }};
+    const countData = {{ project_counts | map(attribute='project_count') | list | tojson }};
+    const awardLabels = {{ avg_awards | map(attribute='borough') | list | tojson }};
+    const awardData = {{ avg_awards | map(attribute='avg_award') | list | tojson }};
+
+    new Chart(document.getElementById("countChart"), {
+        type: "bar",
+        data: {
+            labels: countLabels,
+            datasets: [{
+                label: "Projects",
+                data: countData,
+                backgroundColor: "#005DAA"
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    new Chart(document.getElementById("awardChart"), {
+        type: "bar",
+        data: {
+            labels: awardLabels,
+            datasets: [{
+                label: "Average Award",
+                data: awardData,
+                backgroundColor: "#F26822"
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Browse Buildings{% endblock %}
+
+{% block content %}
+<h1>Browse Buildings</h1>
+<p>{{ total|number }} school buildings match the current search.</p>
+
+<form class="toolbar" method="get">
+    <input type="search" name="search" value="{{ search }}" placeholder="Search school name">
+    <button type="submit">Search</button>
+</form>
+
+<section class="card section">
+    <table>
+        <thead>
+            <tr>
+                <th>Building ID</th>
+                <th>School</th>
+                <th>Address</th>
+                <th>Borough</th>
+                <th>District</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td>{{ row.building_id }}</td>
+                <td>{{ row.school_name }}</td>
+                <td>{{ row.building_address }}, {{ row.city }}</td>
+                <td>{{ row.borough }}</td>
+                <td>{{ row.geographical_district }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<div class="toolbar">
+    <a class="button secondary {% if not has_prev %}disabled{% endif %}" href="{{ url_for('browse', page=page-1, search=search) }}">Previous</a>
+    <span class="pill">Page {{ page }}</span>
+    <a class="button secondary {% if not has_next %}disabled{% endif %}" href="{{ url_for('browse', page=page+1, search=search) }}">Next</a>
+</div>
+{% endblock %}

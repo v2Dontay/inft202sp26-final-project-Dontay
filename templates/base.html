@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Construction Dashboard{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --navy: #0C2255;
+            --blue: #005DAA;
+            --orange: #F26822;
+            --bg: #F4F7FB;
+            --line: #D9E2EF;
+            --text: #172033;
+            --muted: #68758A;
+            --card: #FFFFFF;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Inter, system-ui, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--navy);
+            color: white;
+            border-bottom: 4px solid var(--orange);
+        }
+
+        .nav-inner {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+        }
+
+        .brand {
+            font-weight: 800;
+            letter-spacing: 0;
+        }
+
+        .links {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 14px;
+            padding: 8px 10px;
+            border-radius: 6px;
+        }
+
+        .links a:hover { background: rgba(255, 255, 255, 0.14); }
+
+        main {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 30px 20px 52px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            color: var(--navy);
+            font-size: 34px;
+            line-height: 1.12;
+        }
+
+        h2 {
+            color: var(--navy);
+            font-size: 20px;
+            margin: 0 0 14px;
+        }
+
+        p { color: var(--muted); line-height: 1.55; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin: 24px 0;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            box-shadow: 0 12px 28px rgba(12, 34, 85, 0.08);
+        }
+
+        .stat {
+            padding: 18px;
+            min-height: 126px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .stat-label {
+            color: var(--muted);
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .stat-value {
+            color: var(--blue);
+            font-size: 26px;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+
+        .section {
+            padding: 20px;
+            margin: 18px 0;
+        }
+
+        .charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        canvas { width: 100% !important; height: 280px !important; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--line);
+            text-align: left;
+            vertical-align: top;
+            font-size: 14px;
+        }
+
+        th {
+            background: #EAF1FA;
+            color: var(--navy);
+            font-weight: 800;
+        }
+
+        tr:last-child td { border-bottom: 0; }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        input {
+            width: min(360px, 100%);
+            padding: 11px 12px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            font: inherit;
+        }
+
+        button, .button {
+            border: 0;
+            background: var(--blue);
+            color: white;
+            font: inherit;
+            font-weight: 800;
+            padding: 11px 14px;
+            border-radius: 6px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            min-height: 42px;
+        }
+
+        .button.secondary { background: var(--navy); }
+        .button.disabled { opacity: 0.45; pointer-events: none; }
+
+        .pill {
+            display: inline-flex;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #FFF0E8;
+            color: #9D3B09;
+            font-weight: 800;
+            font-size: 13px;
+        }
+
+        @media (max-width: 760px) {
+            .nav-inner { align-items: flex-start; flex-direction: column; }
+            .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .charts { grid-template-columns: 1fr; }
+            h1 { font-size: 28px; }
+            table { display: block; overflow-x: auto; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-inner">
+            <div class="brand">NYC School Construction</div>
+            <div class="links">
+                <a href="{{ url_for('index') }}">Dashboard</a>
+                <a href="{{ url_for('browse') }}">Browse</a>
+                <a href="{{ url_for('insights') }}">Insights</a>
+            </div>
+        </div>
+    </nav>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

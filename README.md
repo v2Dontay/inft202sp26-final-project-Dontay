@@ -1,84 +1,201 @@
-# INFT202 - Database Final Project
+# NYC School Construction Database Project
 
-This project uses Codex and Docker to guide you through a database final project in small steps: choosing data, exploring it, designing linked tables, writing SQL, and building a small Flask dashboard.
+This project explores active school construction projects in New York City. It uses a PostgreSQL database with two related tables, student-written SQL queries, and a Flask dashboard that summarizes the results.
 
-## Start Here
+## Dataset
 
-1. Fork this repo on GitHub.
-2. Clone your fork:
+Dataset file:
+
+- `Active_Projects_Under_Construction_20260521.csv`
+
+The dataset contains active construction projects at NYC school buildings. Each row in the original CSV represents one construction project, including the school name, building ID, borough, project description, project type, and construction award amount.
+
+The dataset has:
+
+- 936 active construction project rows
+- 690 unique school buildings
+- 5 boroughs represented, plus a few rows with blank borough data
+- Construction award amounts that can be compared by borough, district, and project type
+
+## Data Exploration
+
+The data exploration process showed that the original CSV repeats building information when a building has more than one active project. That made it a good fit for a relational database design.
+
+Important observations:
+
+- `Building ID` is the best identifier for a school building.
+- `Construction Award` is the main numeric measurement.
+- `Borough`, `Project type`, and `Geographical District` are useful grouping columns.
+- Some location fields had blank values, so the final schema kept the location data simple.
+
+Exploration notes are saved in:
+
+- `data_exploration.md`
+
+## Database Schema
+
+The database is split into two related tables.
+
+### `building`
+
+One row represents one school building or construction site.
+
+Main columns:
+
+- `building_id`
+- `school_name`
+- `building_address`
+- `city`
+- `borough`
+- `borough_code`
+- `geographical_district`
+- `latitude`
+- `longitude`
+
+### `projects`
+
+One row represents one active construction project.
+
+Main columns:
+
+- `project_id`
+- `building_id`
+- `project_description`
+- `construction_award`
+- `project_type`
+
+The relationship is:
+
+`projects.building_id` connects to `building.building_id`.
+
+Schema planning notes are saved in:
+
+- `schema_plan.md`
+- `table_creation.sql`
+
+## Import Process
+
+The original CSV was cleaned into two import files:
+
+- `data/building_import.csv`
+- `data/projects_import.csv`
+
+The import commands are saved in:
+
+- `import.sql`
+
+After import, the database contained:
+
+- `building`: 690 rows
+- `projects`: 936 rows
+
+## Guided SQL Queries
+
+The project includes six guided SQL queries.
+
+1. `queries/query_1.sql` - Shows the 10 highest-award Queens construction projects.
+2. `queries/query_2.sql` - Counts active construction projects by borough.
+3. `queries/query_3.sql` - Calculates average construction award amount by borough.
+4. `queries/query_4.sql` - Shows boroughs with more than 100 projects and their average award.
+5. `queries/query_5.sql` - Lists Queens construction projects with school and address details.
+6. `queries/query_6.sql` - Calculates total construction award amount by borough.
+
+## Discussion Queries
+
+Two discussion queries were selected for deeper analysis.
+
+### Queens vs. Brooklyn Average Awards
+
+File:
+
+- `discussion/discussion_1.sql`
+
+Explanation:
+
+Queens has the higher average construction award compared with Brooklyn. This suggests that active construction projects in Queens are usually larger or more expensive than Brooklyn projects in this dataset.
+
+### Geographical District Project Counts
+
+File:
+
+- `discussion/discussion_2.sql`
+
+Explanation:
+
+The results reveal that construction activity is not spread evenly across the city, as certain areas see much higher development than others. The data shows that District 27 has the most active projects of any geographical district. This suggests that infrastructure needs or funding priorities may be focused on that particular region compared to the rest of the districts.
+
+## Flask Dashboard
+
+The project includes a Flask web dashboard connected to the PostgreSQL database.
+
+Pages:
+
+- `/` - Dashboard with summary statistics and Chart.js charts
+- `/browse` - Searchable table of school buildings
+- `/insights` - Discussion query results and explanations
+
+Main app files:
+
+- `app.py`
+- `templates/base.html`
+- `templates/index.html`
+- `templates/browse.html`
+- `templates/insights.html`
+
+## Running the Project
+
+Start the PostgreSQL database and Adminer:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/inft202-final-project.git
-cd inft202-final-project
+docker compose up
 ```
 
-3. Open Codex and choose this project folder as the workspace.
-4. In Codex, run the local agent skill by saying:
+Start the Flask app:
+
+```bash
+docker compose --profile app up --build
+```
+
+Open the app:
 
 ```text
-Load the db-final-project skill and start the final project guide.
+http://localhost:5000
 ```
 
-Codex will detect which phase you are in and tell you the next step.
+Open Adminer:
 
-Codex's first job is to run `scripts/setup_check.py`. That script checks your GitHub setup, starts the Docker database bundle, and verifies a PostgreSQL database named `final`.
+```text
+http://localhost:8080
+```
 
-## What You Need Installed
+Adminer login:
 
-- Git
-- Docker Desktop
-- Codex
-- A GitHub account
-
-You do not need to install PostgreSQL, Python, pip, or Flask directly on your computer. Docker runs the database and app environment for this project.
-
-## What You Will Create
-
-- `data_exploration.md` - notes from exploring your dataset
-- `schema_plan.md` - your table design and table relationships
-- `table_creation.sql` - your own `CREATE TABLE` commands
-- `import.sql` - helper commands for loading data
-- `queries/query_1.sql` through `queries/query_6.sql` - guided SQL queries
-- `discussion/discussion_1.sql` and `discussion/discussion_2.sql` - your own analysis queries
-- A Flask dashboard generated after your SQL work is complete
-
-## Database Workflow
-
-The Docker setup starts:
-
-- PostgreSQL at `localhost:5432`
-- Adminer, a browser database tool, at `http://localhost:8080`
-
-To use **Adminer**, open `http://localhost:8080` and enter:
-
-- System/server: `PostgreSQL`
+- System: `PostgreSQL`
 - Server: `postgres`
 - Username: `postgres`
 - Password: `postgres`
 - Database: `final`
 
-To use **Beekeeper Studio**, create a new Postgres connection and enter:
+Beekeeper Studio connection:
 
+- Connection type: `Postgres`
 - Host: `localhost`
 - Port: `5432`
 - User: `postgres`
 - Password: `postgres`
 - Default database: `final`
 
-Write and run SQL in Adminer or Beekeeper Studio, then paste your query and a few result rows back into Codex. Codex will help you debug and will save your finished query files.
+## Environment File
 
-Codex can guide you, but it should not write your final `CREATE TABLE` commands or graded query SQL for you.
+The Flask app uses `.env` for database connection settings. This file is listed in `.gitignore` so the database password is not committed to GitHub.
 
-## Submit
+## What This Project Demonstrates
 
-When finished, push your work to GitHub and submit the repo link on Canvas:
+This project demonstrates how to:
 
-```bash
-git add .
-git commit -m "Final project complete"
-git push
-```
-
-Your `.env` file should stay out of GitHub because it may contain your database password.
-
-See [RUBRIC.md](RUBRIC.md) for grading details.
+- Explore a real-world CSV dataset
+- Design a relational PostgreSQL schema
+- Split repeated CSV data into related tables
+- Import cleaned data into PostgreSQL
+- Write SQL using `SELECT`, `WHERE`, `GROUP BY`, `HAVING`, aggregate functions, and `JOIN`
+- Build a Flask dashboard connected to a PostgreSQL database

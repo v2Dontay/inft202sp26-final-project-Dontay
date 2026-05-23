@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Insights{% endblock %}
+
+{% block content %}
+<h1>Discussion Insights</h1>
+<p>Two student-selected questions about construction awards and project concentration.</p>
+
+{% for insight in insights %}
+<section class="card section">
+    <h2>{{ insight.title }}</h2>
+    <p>{{ insight.description }}</p>
+    <table>
+        <thead>
+            <tr>
+                {% for key in insight.rows[0].keys() %}
+                <th>{{ key.replace("_", " ").title() }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in insight.rows %}
+            <tr>
+                {% for key, value in row.items() %}
+                <td>
+                    {% if "award" in key %}
+                        {{ value|money }}
+                    {% else %}
+                        {{ value }}
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endfor %}
+{% endblock %}

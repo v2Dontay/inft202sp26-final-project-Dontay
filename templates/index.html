@@ -27,45 +27,367 @@
 
 <section class="charts">
     <div class="card section">
-        <h2>Projects by Borough</h2>
-        <canvas id="countChart"></canvas>
+        <div class="chart-kicker">Interactive D3</div>
+        <h2>Project Share by Borough</h2>
+        <div class="chart-shell">
+            <div id="countChart" class="d3-chart"></div>
+            <p id="countNote" class="chart-note">Hover over a slice to compare borough project share. Click a slice to keep its details here.</p>
+        </div>
     </div>
     <div class="card section">
+        <div class="chart-kicker">Interactive D3</div>
         <h2>Average Award by Borough</h2>
-        <canvas id="awardChart"></canvas>
+        <div class="chart-shell">
+            <div id="awardChart" class="d3-chart"></div>
+            <p id="awardNote" class="chart-note">Hover over a bar to compare average award amounts. Click a bar to keep its details here.</p>
+        </div>
     </div>
 </section>
 
+<div id="chartTooltip" class="chart-tooltip"></div>
+
 <script>
-    const countLabels = {{ project_counts | map(attribute='borough') | list | tojson }};
-    const countData = {{ project_counts | map(attribute='project_count') | list | tojson }};
-    const awardLabels = {{ avg_awards | map(attribute='borough') | list | tojson }};
-    const awardData = {{ avg_awards | map(attribute='avg_award') | list | tojson }};
+    const projectCounts = {{ project_counts | tojson }};
+    const averageAwards = {{ avg_awards | tojson }};
 
-    new Chart(document.getElementById("countChart"), {
-        type: "bar",
-        data: {
-            labels: countLabels,
-            datasets: [{
-                label: "Projects",
-                data: countData,
-                backgroundColor: "#005DAA"
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
+    function renderDonutChart(options) {
+        const { selector, noteSelector, data, valueKey, formatValue, valueLabel } = options;
+        const container = d3.select(selector);
+        container.selectAll("*").remove();
 
-    new Chart(document.getElementById("awardChart"), {
-        type: "bar",
-        data: {
-            labels: awardLabels,
-            datasets: [{
-                label: "Average Award",
-                data: awardData,
-                backgroundColor: "#F26822"
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
+        const node = container.node();
+        const width = node.getBoundingClientRect().width || 380;
+        const height = 340;
+        const radius = Math.min(width, height) / 2 - 28;
+        const tooltip = d3.select("#chartTooltip");
+        const note = d3.select(noteSelector);
+        const total = d3.sum(data, d => Number(d[valueKey]));
+        let pinnedBorough = null;
+
+        const colors = d3.scaleOrdinal()
+            .domain(data.map(d => d.borough))
+            .range(["#005DAA", "#F26822", "#0C2255", "#38A3FF", "#FFB15C"]);
+
+        const svg = container
+            .append("svg")
+            .attr("viewBox", `0 0 ${width} ${height}`)
+            .attr("role", "img")
+            .attr("width", "100%")
+            .attr("height", height);
+
+        const defs = svg.append("defs");
+        const glow = defs.append("filter")
+            .attr("id", "donutGlow")
+            .attr("x", "-30%")
+            .attr("y", "-30%")
+            .attr("width", "160%")
+            .attr("height", "160%");
+        glow.append("feGaussianBlur").attr("stdDeviation", "5").attr("result", "blur");
+        glow.append("feColorMatrix")
+            .attr("in", "blur")
+            .attr("type", "matrix")
+            .attr("values", "0 0 0 0 0.95 0 0 0 0 0.41 0 0 0 0 0.13 0 0 0 0.40 0")
+            .attr("result", "glow");
+        const merge = glow.append("feMerge");
+        merge.append("feMergeNode").attr("in", "glow");
+        merge.append("feMergeNode").attr("in", "SourceGraphic");
+
+        const chart = svg.append("g")
+            .attr("transform", `translate(${width / 2 - 38},${height / 2})`);
+
+        const pie = d3.pie()
+            .sort(null)
+            .value(d => Number(d[valueKey]));
+
+        const arc = d3.arc()
+            .innerRadius(radius * 0.58)
+            .outerRadius(radius);
+
+        const hoverArc = d3.arc()
+            .innerRadius(radius * 0.56)
+            .outerRadius(radius + 8);
+
+        const slices = chart.selectAll("path")
+            .data(pie(data))
+            .join("path")
+            .attr("class", "donut-slice")
+            .attr("fill", d => colors(d.data.borough))
+            .attr("stroke", "#FFFFFF")
+            .attr("stroke-width", 3)
+            .attr("d", arc)
+            .attr("opacity", 0.92);
+
+        chart.append("text")
+            .attr("class", "donut-center-label")
+            .attr("text-anchor", "middle")
+            .attr("y", -8)
+            .text("Projects");
+
+        chart.append("text")
+            .attr("class", "donut-center-value")
+            .attr("text-anchor", "middle")
+            .attr("y", 24)
+            .text(formatValue(total));
+
+        const legend = svg.append("g")
+            .attr("class", "donut-legend")
+            .attr("transform", `translate(${width - 118},${Math.max(48, height / 2 - 84)})`);
+
+        const legendItems = legend.selectAll("g")
+            .data(data)
+            .join("g")
+            .attr("transform", (d, i) => `translate(0,${i * 30})`);
+
+        legendItems.append("rect")
+            .attr("width", 13)
+            .attr("height", 13)
+            .attr("rx", 3)
+            .attr("fill", d => colors(d.borough));
+
+        legendItems.append("text")
+            .attr("x", 20)
+            .attr("y", 11)
+            .text(d => d.borough);
+
+        function percent(d) {
+            return d3.format(".1%")(Number(d[valueKey]) / total);
+        }
+
+        function detailText(d) {
+            return `<strong>${d.borough}</strong>: ${formatValue(Number(d[valueKey]))} ${valueLabel} (${percent(d)} of total)`;
+        }
+
+        function setActive(datum) {
+            slices
+                .attr("opacity", d => d.data.borough === datum.borough ? 1 : 0.34)
+                .attr("filter", d => d.data.borough === datum.borough ? "url(#donutGlow)" : null)
+                .attr("d", d => d.data.borough === datum.borough ? hoverArc(d) : arc(d));
+        }
+
+        function clearActive() {
+            if (pinnedBorough) {
+                const pinned = data.find(d => d.borough === pinnedBorough);
+                setActive(pinned);
+            } else {
+                slices.attr("opacity", 0.92).attr("filter", null).attr("d", arc);
+            }
+        }
+
+        slices
+            .on("mousemove", (event, d) => {
+                setActive(d.data);
+                tooltip
+                    .style("left", `${event.clientX}px`)
+                    .style("top", `${event.clientY}px`)
+                    .style("opacity", 1)
+                    .html(detailText(d.data));
+            })
+            .on("mouseleave", () => {
+                tooltip.style("opacity", 0);
+                clearActive();
+            })
+            .on("click", (event, d) => {
+                pinnedBorough = d.data.borough;
+                setActive(d.data);
+                note.html(`${detailText(d.data)}.`);
+            });
+    }
+
+    function renderInteractiveBarChart(options) {
+        const { selector, noteSelector, data, valueKey, color, accent, formatValue, valueLabel } = options;
+        const container = d3.select(selector);
+        container.selectAll("*").remove();
+
+        const node = container.node();
+        const width = node.getBoundingClientRect().width || 380;
+        const height = 340;
+        const margin = { top: 14, right: 72, bottom: 34, left: 98 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+        const tooltip = d3.select("#chartTooltip");
+        const note = d3.select(noteSelector);
+        let pinnedBorough = null;
+
+        const svg = container
+            .append("svg")
+            .attr("viewBox", `0 0 ${width} ${height}`)
+            .attr("role", "img")
+            .attr("width", "100%")
+            .attr("height", height);
+
+        const safeId = selector.replace(/[^a-zA-Z0-9]/g, "");
+        const defs = svg.append("defs");
+
+        const gradient = defs.append("linearGradient")
+            .attr("id", `${safeId}Gradient`)
+            .attr("x1", "0%")
+            .attr("x2", "100%");
+
+        gradient.append("stop")
+            .attr("offset", "0%")
+            .attr("stop-color", color);
+
+        gradient.append("stop")
+            .attr("offset", "100%")
+            .attr("stop-color", accent);
+
+        const glow = defs.append("filter")
+            .attr("id", `${safeId}Glow`)
+            .attr("x", "-20%")
+            .attr("y", "-40%")
+            .attr("width", "140%")
+            .attr("height", "180%");
+
+        glow.append("feGaussianBlur")
+            .attr("stdDeviation", "4")
+            .attr("result", "blur");
+
+        glow.append("feColorMatrix")
+            .attr("in", "blur")
+            .attr("type", "matrix")
+            .attr("values", "0 0 0 0 0.95 0 0 0 0 0.41 0 0 0 0 0.13 0 0 0 0.42 0")
+            .attr("result", "glow");
+
+        const merge = glow.append("feMerge");
+        merge.append("feMergeNode").attr("in", "glow");
+        merge.append("feMergeNode").attr("in", "SourceGraphic");
+
+        const chart = svg.append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const maxValue = d3.max(data, d => Number(d[valueKey]));
+
+        const x = d3.scaleLinear()
+            .domain([0, maxValue])
+            .nice()
+            .range([0, innerWidth]);
+
+        const y = d3.scaleBand()
+            .domain(data.map(d => d.borough))
+            .range([0, innerHeight])
+            .padding(0.24);
+
+        chart.append("g")
+            .attr("transform", `translate(0,${innerHeight})`)
+            .call(d3.axisBottom(x).ticks(4).tickFormat(formatValue))
+            .selectAll("text")
+            .attr("class", "axis-label");
+
+        chart.append("g")
+            .call(d3.axisLeft(y).tickSize(0))
+            .selectAll("text")
+            .attr("class", "bar-label");
+
+        chart.select(".domain").remove();
+
+        chart.append("g")
+            .attr("class", "grid")
+            .attr("transform", `translate(0,${innerHeight})`)
+            .call(
+                d3.axisBottom(x)
+                    .ticks(4)
+                    .tickSize(-innerHeight)
+                    .tickFormat("")
+            )
+            .call(g => g.select(".domain").remove())
+            .call(g => g.selectAll("line")
+                .attr("stroke", "#D9E2EF")
+                .attr("stroke-dasharray", "3 4"));
+
+        const bars = chart.selectAll(".bar")
+            .data(data)
+            .join("rect")
+            .attr("class", "bar")
+            .attr("x", 0)
+            .attr("y", d => y(d.borough))
+            .attr("width", 0)
+            .attr("height", y.bandwidth())
+            .attr("rx", 6)
+            .attr("fill", `url(#${safeId}Gradient)`)
+            .attr("opacity", 0.88)
+            .style("cursor", "pointer");
+
+        bars.transition()
+            .duration(650)
+            .delay((d, i) => i * 60)
+            .attr("width", d => x(Number(d[valueKey])));
+
+        const values = chart.selectAll(".bar-value")
+            .data(data)
+            .join("text")
+            .attr("class", "bar-value")
+            .attr("x", d => x(Number(d[valueKey])) + 8)
+            .attr("y", d => y(d.borough) + y.bandwidth() / 2 + 4)
+            .text(d => formatValue(Number(d[valueKey])));
+
+        function detailText(d) {
+            return `<strong>${d.borough}</strong>: ${formatValue(Number(d[valueKey]))} ${valueLabel}`;
+        }
+
+        function setActive(d) {
+            bars.attr("opacity", item => item.borough === d.borough ? 1 : 0.42);
+            bars.attr("filter", item => item.borough === d.borough ? `url(#${safeId}Glow)` : null);
+            values.attr("opacity", item => item.borough === d.borough ? 1 : 0.55);
+        }
+
+        function clearActive() {
+            if (pinnedBorough) {
+                bars.attr("opacity", item => item.borough === pinnedBorough ? 1 : 0.42);
+                bars.attr("filter", item => item.borough === pinnedBorough ? `url(#${safeId}Glow)` : null);
+                values.attr("opacity", item => item.borough === pinnedBorough ? 1 : 0.55);
+            } else {
+                bars.attr("opacity", 0.88);
+                bars.attr("filter", null);
+                values.attr("opacity", 1);
+            }
+        }
+
+        bars
+            .on("mousemove", (event, d) => {
+                setActive(d);
+                tooltip
+                    .style("left", `${event.clientX}px`)
+                    .style("top", `${event.clientY}px`)
+                    .style("opacity", 1)
+                    .html(detailText(d));
+            })
+            .on("mouseleave", () => {
+                tooltip.style("opacity", 0);
+                clearActive();
+            })
+            .on("click", (event, d) => {
+                pinnedBorough = d.borough;
+                setActive(d);
+                note.html(`${detailText(d)}.`);
+            });
+    }
+
+    const moneyFormat = value => d3.format("$.2s")(value).replace("G", "B");
+    const countFormat = value => d3.format(",")(value);
+
+    function renderCharts() {
+        renderDonutChart({
+            selector: "#countChart",
+            noteSelector: "#countNote",
+            data: projectCounts,
+            valueKey: "project_count",
+            formatValue: countFormat,
+            valueLabel: "active projects"
+        });
+
+        renderInteractiveBarChart({
+            selector: "#awardChart",
+            noteSelector: "#awardNote",
+            data: averageAwards,
+            valueKey: "avg_award",
+            color: "#F26822",
+            accent: "#FFB15C",
+            formatValue: moneyFormat,
+            valueLabel: "average award"
+        });
+    }
+
+    renderCharts();
+    window.addEventListener("resize", renderCharts);
 </script>
 {% endblock %}

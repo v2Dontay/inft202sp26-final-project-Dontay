@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <style>
         :root {
             --navy: #0C2255;
@@ -26,7 +26,9 @@
             margin: 0;
             font-family: Inter, system-ui, sans-serif;
             color: var(--text);
-            background: var(--bg);
+            background:
+                radial-gradient(circle at top left, rgba(0, 93, 170, 0.13), transparent 34%),
+                linear-gradient(180deg, #F8FBFF 0%, var(--bg) 44%, #EEF3FA 100%);
         }
 
         nav {
@@ -127,7 +129,7 @@
         }
 
         .section {
-            padding: 20px;
+            padding: 22px;
             margin: 18px 0;
         }
 
@@ -137,7 +139,116 @@
             gap: 18px;
         }
 
-        canvas { width: 100% !important; height: 280px !important; }
+        .chart-shell {
+            position: relative;
+            padding-top: 4px;
+        }
+
+        .d3-chart {
+            width: 100%;
+            min-height: 340px;
+            border-radius: 8px;
+            background:
+                linear-gradient(180deg, rgba(0, 93, 170, 0.06), rgba(255, 255, 255, 0)),
+                #FFFFFF;
+        }
+
+        .donut-slice {
+            cursor: pointer;
+            transition: opacity 140ms ease;
+        }
+
+        .donut-center-label {
+            fill: var(--muted);
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .donut-center-value {
+            fill: var(--navy);
+            font-size: 25px;
+            font-weight: 800;
+        }
+
+        .donut-legend text {
+            fill: var(--text);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .axis-label {
+            fill: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .bar-value {
+            fill: var(--text);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .bar-label {
+            fill: var(--navy);
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .chart-tooltip {
+            position: fixed;
+            z-index: 20;
+            pointer-events: none;
+            background: var(--navy);
+            color: white;
+            padding: 10px 12px;
+            border-radius: 6px;
+            box-shadow: 0 14px 30px rgba(12, 34, 85, 0.22);
+            font-size: 13px;
+            line-height: 1.35;
+            opacity: 0;
+            transform: translate(-50%, -120%);
+            transition: opacity 120ms ease;
+            max-width: 220px;
+        }
+
+        .chart-note {
+            margin: 12px 0 0;
+            min-height: 56px;
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.45;
+            border: 1px solid var(--line);
+            border-left: 5px solid var(--orange);
+            background: #FFFFFF;
+            border-radius: 8px;
+            padding: 12px 13px;
+            box-shadow: 0 10px 22px rgba(12, 34, 85, 0.06);
+        }
+
+        .chart-note strong {
+            color: var(--navy);
+        }
+
+        .chart-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .chart-kicker::before {
+            content: "";
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--orange);
+            box-shadow: 0 0 0 5px rgba(242, 104, 34, 0.14);
+        }
 
         table {
             width: 100%;
